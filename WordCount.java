@@ -12,24 +12,21 @@ public class WordCount {
     public static class TokenizerMapper extends Mapper<Object, Text, Text, IntWritable> {
         private final static IntWritable one = new IntWritable(1);
         private Text word = new Text();
+        private static final Set<String> STOP_WORDS = new HashSet<>(Arrays.asList(
+                "a", "an", "and", "are", "as", "at", "be", "but", "by",
+                "for", "if", "in", "into", "is", "it", "no", "not",
+                "of", "on", "or", "such", "that", "the", "their", "then",
+                "there", "these", "they", "this", "to", "was", "will", "with"));
 
+        @Override
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-            String line = value.toString().replaceAll("[\\p{Punct}]", "").toLowerCase();
+            String line = value.toString().toLowerCase().replaceAll("[^a-zA-Z0-9\\s]", " ");
+
             StringTokenizer itr = new StringTokenizer(line);
-            Set<String> uniqueWords = new HashSet<>();
-
             while (itr.hasMoreTokens()) {
-                uniqueWords.add(itr.nextToken());
-            }
-
-            List<String> sortedWords = new ArrayList<>(uniqueWords);
-            Collections.sort(sortedWords);
-
-            for (int i = 0; i < sortedWords.size(); i++) {
-                word.set(sortedWords.get(i));
-                context.write(word, one);
-                for (int j = i + 1; j < sortedWords.size(); j++) {
-                    word.set(sortedWords.get(i) + ":" + sortedWords.get(j));
+                String currWord = itr.nextToken();
+                if (!STOP_WORDS.contains(currWord)) {
+                    word.set(currWord);
                     context.write(word, one);
                 }
             }
@@ -99,6 +96,7 @@ public class WordCount {
 
     public static class ConfidenceReducer extends Reducer<Text, Text, Text, FloatWritable> {
         private FloatWritable result = new FloatWritable();
+        private Text wordPair = new Text(); // Declare the wordPair variable here
 
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             int total = 0;
@@ -108,8 +106,8 @@ public class WordCount {
                 String[] parts = val.toString().split(":");
                 if (parts[0].equals("total")) {
                     total = Integer.parseInt(parts[1]);
-                } else {
-                    pairCounts.put(parts[0], Integer.parseInt(parts[1]));
+                } else if (parts[0].equals("pair")) {
+                    pairCounts.put(parts[1], Integer.parseInt(parts[2]));
                 }
             }
 
