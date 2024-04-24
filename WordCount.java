@@ -15,14 +15,29 @@ public class WordCount {
         private static final Set<String> STOP_WORDS = new HashSet<>(Arrays.asList(
                 "a", "an", "and", "are", "as", "at", "be", "but", "by",
                 "for", "if", "in", "into", "is", "it", "no", "not",
-                "of", "on", "or", "such", "that", "the", "their", "then",
+                "of", "on", "or", "that", "the", "their", "then",
                 "there", "these", "they", "this", "to", "was", "will", "with"));
+
+        private static final Set<Character> PUNCTUATIONS = new HashSet<>(Arrays.asList(
+                ',', '.', ';', ':', '?', '!', '-', '"', '\'', '(', ')', '[', ']', '{', '}', '<', '>', '@', '#', '$',
+                '%',
+                '^', '&', '*', '_'));
 
         @Override
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-            String line = value.toString().toLowerCase().replaceAll("[^a-zA-Z0-9\\s]", " ");
+            String line = value.toString().toLowerCase();
+            StringBuilder filteredLine = new StringBuilder();
 
-            StringTokenizer itr = new StringTokenizer(line);
+            // Manually remove punctuation
+            for (char c : line.toCharArray()) {
+                if (!PUNCTUATIONS.contains(c)) {
+                    filteredLine.append(c);
+                } else {
+                    filteredLine.append(' '); // Replace punctuation with space
+                }
+            }
+
+            StringTokenizer itr = new StringTokenizer(filteredLine.toString());
             while (itr.hasMoreTokens()) {
                 String currWord = itr.nextToken();
                 if (!STOP_WORDS.contains(currWord)) {
